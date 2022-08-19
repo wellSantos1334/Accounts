@@ -18,6 +18,7 @@ function operations() {
                     'Depositar',
                     'Sacar',
                     'Transferir',
+                    'Solicitar Empréstimo',
                     'Sair'
                 ],
             }]).then((answer) => {
@@ -33,6 +34,8 @@ function operations() {
                     withdrawAccountBalance()
                 } else if (action === 'Transferir') {
                     transferBalance()
+                } else if (action === 'Solicitar Empréstimo') {
+                    requestLoan()
                 } else if (action === 'Sair') {
                     console.log(chalk.bgBlue.black('Obrigado por utilizar o Accounts!'))
                     process.exit()
@@ -71,14 +74,16 @@ function buildAccount() {
                 )
                 buildAccount()
                 return
+            } else {
+                fs.writeFileSync(`accounts/${accountName}.json`, '{"balance":0, "loan":0}', function (err) {
+                    console.log('Erro ao criar: ' + err)
+                })
+
+                console.log(chalk.green('Parabéns, conta criada com sucesso!'))
+                operations()
             }
 
-            fs.writeFileSync(`accounts/${accountName}.json`, '{"balance":0}', function (err) {
-                console.log('Erro ao criar: ' + err)
-            })
 
-            console.log(chalk.green('Parabéns, conta criada com sucesso!'))
-            operations()
         }).catch((err) => {
             console.log('Erro: ' + err)
         })
@@ -127,7 +132,6 @@ function checkAccount(accountName) {
 
     return true
 }
-
 function addAmount(accountName, amount) {
     const accountData = getAccount(accountName)
 
@@ -145,7 +149,6 @@ function addAmount(accountName, amount) {
     )
     console.log(chalk.green(`Foi depositado o valor de R$${amount} na sua conta!`))
 }
-
 function getAccount(accountName) {
     const accountJSON = fs.readFileSync(`accounts/${accountName}.json`, {
         encoding: 'utf8',
@@ -155,7 +158,6 @@ function getAccount(accountName) {
 }
 
 // show account balance
-
 function getAccountBalance() {
     inquirer
         .prompt([
@@ -230,8 +232,7 @@ function withdrawAccountBalance() {
         })
 }
 
-// Transfer an amount between accounts
-
+// transfer an amount between accounts
 function transferBalance() {
     inquirer
         .prompt([
@@ -243,7 +244,6 @@ function transferBalance() {
             const accountName = answer['accountName']
 
             if (!checkAccount(accountName)) {
-
                 return transferBalance()
             } else {
                 inquirer
@@ -295,6 +295,54 @@ function transferBalance() {
                                     console.log('Erro: ' + err)
                                 })
                         }
+                    }).catch((err) => {
+                        console.log('Erro: ' + err)
+                    })
+            }
+        }).catch((err) => {
+            console.log('Erro: ' + err)
+        })
+}
+
+// request an loan
+function requestLoan() {
+    inquirer
+        .prompt([
+            {
+                name: 'accountName',
+                message: 'Qual sua conta?'
+            }
+        ]).then((answer) => {
+            const accountName = answer['accountName']
+
+            if (!checkAccount(accountName)) {
+                return requestLoan()
+            } else {
+                const accountData = getAccount(accountName)
+
+                inquirer
+                    .prompt([
+                        {
+                            name: 'loanValue',
+                            message: 'Qual o valor do empréstimo que deseja solicitar?'
+                        }
+                    ]).then((answer) => {
+                        const loanValue = answer['loanValue']
+
+                        // if(checkAvailableLoan()){}
+
+                        accountData.loan = parseFloat(accountData.loan) + parseFloat(loanValue)
+                        accountData.balance = parseFloat(accountData.balance) + parseFloat(accountData.loan)
+
+                        fs.writeFileSync(
+                            `accounts/${accountName}.json`,
+                            JSON.stringify(accountData),
+                            function (err) {
+                                console.log(err)
+                            },
+                        )
+                        console.log(chalk.bgBlue.black(`Aprovado! Você fez um empréstimo de ${loanValue} reais, agora seu saldo atual é: ${accountData.balance} reais`))
+                        operations()
                     }).catch((err) => {
                         console.log('Erro: ' + err)
                     })
